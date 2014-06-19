@@ -1,6 +1,7 @@
 <html>
 <head>
     <title>Chat Example</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/normalize.css">
     <link rel="stylesheet" type="text/css" href="/assets/css/screen.css">
 </head>
 <body>
@@ -8,11 +9,14 @@
 <div id="log"></div>
 
 <form id="form">
-    <input type="submit" value="Send" />
-    <input type="text" id="msg" size="64"/>
+    <div class="form-inner">
+        <input type="submit" value="Send" class="hide" />
+        <input type="text" id="msg" size="64"/>
+    </div>
 </form>
 
 <script type="text/javascript" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.cookie.js"></script>
 <script type="text/javascript" src="/assets/js/detector.js"></script>
 <script type="text/javascript" src="/assets/js/md5.js"></script>
 <script type="text/javascript" src="/assets/js/main.js"></script>

@@ -4,6 +4,11 @@ $(function() {
     var msg = $("#msg");
     var log = $("#log");
 
+    $.cookie('online_from', username, {
+        expires: 7,
+        path: '/'
+    });
+
     function appendLog(msg) {
         var d = log[0]
         var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
@@ -41,8 +46,13 @@ $(function() {
             appendLog($("<div><b>Connection closed.</b></div>"))
         }
         conn.onmessage = function(e) {
-            var data = jQuery.parseJSON(e.data);;
-            appendLog($("<div/>").text(data.from + ": " + data.message));
+            var data = jQuery.parseJSON(e.data),
+                from = data.from == username ? "Вы" : data.from,
+                className = data.from == username ? "message-item" : "message-item reply",
+                tpl = "<table class='" + className + "'><tr><th class='from'>" + from + "</th>" +
+                    "<td class='message'>" + data.message + "</td></tr></table>";
+
+            appendLog($("<div/>").html(tpl));
         }
     } else {
         appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))
