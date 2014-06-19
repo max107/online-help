@@ -49,10 +49,10 @@ $(function() {
             var data = jQuery.parseJSON(e.data),
                 from = data.from == username ? "Вы" : data.from,
                 className = data.from == username ? "message-item" : "message-item reply",
-                tpl = "<table class='" + className + "'><tr><th class='from'>" + from + "</th>" +
-                    "<td class='message'>" + data.message + "</td></tr></table>";
+                tpl = "<p class='from'>" + from + "</p>" +
+                    "<p class='message'>" + data.message + "</p>";
 
-            appendLog($("<div/>").html(tpl));
+            appendLog($("<div/>").addClass(className).html(tpl));
         }
     } else {
         appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))

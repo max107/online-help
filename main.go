@@ -16,15 +16,16 @@ var (
 )
 
 func GetJabberAlias(username string) string {
-	aliases := map[string]string{
-		"max@xmpp.107.su": "Максим",
-	}
+	return "Менеджер"
+	// aliases := map[string]string{
+	// 	"max@xmpp.107.su": "Максим",
+	// }
 
-	if alias, ok := aliases[username]; ok {
-		return alias
-	} else {
-		return username
-	}
+	// if alias, ok := aliases[username]; ok {
+	// 	return alias
+	// } else {
+	// 	return username
+	// }
 }
 
 func GetJabberClient(from string) *xmpp.Client {
@@ -146,8 +147,10 @@ var (
 	homeTempl = template.Must(template.ParseFiles(filepath.Join("templates", "home.html")))
 )
 
-func homeHandler(c http.ResponseWriter, req *http.Request) {
-	homeTempl.Execute(c, req.Host)
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	homeTempl.Execute(w, r.Host)
 }
 
 var upgrader = &websocket.Upgrader{
@@ -186,12 +189,14 @@ func (c *Connection) WsWriter() {
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 
-	c := &Connection{send: make(chan []byte, 256), ws: conn}
+	c := &Connection{send: make(chan []byte), ws: conn}
 
 	cookie, _ := r.Cookie("online_from")
 	from := cookie.Value
