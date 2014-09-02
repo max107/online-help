@@ -41,11 +41,12 @@ $(function() {
     });
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://localhost:8080/ws");
+        conn = new WebSocket("ws://localhost:8080/qwe/ws");
         conn.onclose = function(e) {
             appendLog($("<div><b>Connection closed.</b></div>"))
         }
         conn.onmessage = function(e) {
+            console.log(e.data);
             var data = jQuery.parseJSON(e.data),
                 from = data.from == username ? "Вы" : data.from,
                 className = data.from == username ? "message-item" : "message-item reply",
