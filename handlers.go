@@ -31,10 +31,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	c := &Connection{send: make(chan []byte), ws: conn}
 
-	// cookie, _ := r.Cookie("online_from")
-	// from := cookie.Value
+	cookie, _ := r.Cookie("online_from")
+	from := cookie.Value
 
-	if h, ok := collections[apikey]; ok {
+	log.Printf("%s", apikey+from)
+
+	if h, ok := collections[apikey+from]; ok {
 		h.register <- c
 		defer func() { h.unregister <- c }()
 	} else {
@@ -43,14 +45,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		h.register = make(chan *Connection)
 		h.unregister = make(chan *Connection)
 		h.connections = make(map[*Connection]bool)
-		go h.run(apikey)
+		go h.run(apikey, from)
 
-		collections[apikey] = h
+		collections[apikey+from] = h
 
 		h.register <- c
 		defer func() { h.unregister <- c }()
 	}
 
 	go c.WsWriter()
-	c.WsReader(apikey)
+	c.WsReader(apikey, from)
 }

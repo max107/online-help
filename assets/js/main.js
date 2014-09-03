@@ -32,7 +32,7 @@ $(function() {
             message: msg.val()
         });
 
-        console.log(data);
+        console.log(username, data);
         conn.send(data);
 
         msg.val("");

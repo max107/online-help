@@ -18,15 +18,15 @@ func GetJabberAlias(username string) string {
 	return "Менеджер"
 }
 
-func GetJabberClient(apikey string) *xmpp.Client {
-	if talk, ok := xmppConnections[apikey]; ok {
+func GetJabberClient(apikey string, from string) *xmpp.Client {
+	if talk, ok := xmppConnections[apikey+from]; ok {
 		return talk
 	} else {
-		return InitJabber(apikey)
+		return InitJabber(apikey, from)
 	}
 }
 
-func InitJabber(apikey string) *xmpp.Client {
+func InitJabber(apikey string, from string) *xmpp.Client {
 	options := xmpp.Options{
 		Host:     "helpdev.info",
 		User:     "",
@@ -56,18 +56,18 @@ func InitJabber(apikey string) *xmpp.Client {
 					msg := newMessage(username[0], v.Text)
 					msg.From = GetJabberAlias(username[0])
 
-					collections[apikey].msg(msg)
+					collections[apikey+from].msg(msg)
 				}
 			}
 		}
 	}()
 
-	xmppConnections[apikey] = talk
+	xmppConnections[apikey+from] = talk
 	return talk
 }
 
-func SendMsg(apikey string, to string, msg Message) {
-	talk := GetJabberClient(apikey)
+func SendMsg(apikey string, from string, to string, msg Message) {
+	talk := GetJabberClient(apikey, from)
 	talk.Send(xmpp.Chat{
 		Remote: to,
 		Type:   "chat",
@@ -101,7 +101,7 @@ func (h *Hub) msg(msg Message) {
 	}
 }
 
-func (h *Hub) run(apikey string) {
+func (h *Hub) run(apikey string, from string) {
 	for {
 		select {
 		case c := <-h.register:
@@ -113,7 +113,7 @@ func (h *Hub) run(apikey string) {
 			close(c.send)
 		case msg := <-h.broadcast:
 			log.Printf("broadcast")
-			SendMsg(apikey, "max@xmpp.107.su", msg)
+			SendMsg(apikey, from, "max@xmpp.107.su", msg)
 			h.msg(msg)
 		}
 	}
@@ -139,7 +139,7 @@ type Connection struct {
 	send chan []byte
 }
 
-func (c *Connection) WsReader(apikey string) {
+func (c *Connection) WsReader(apikey string, from string) {
 	for {
 		msg := Message{}
 		err := c.ws.ReadJSON(&msg)
@@ -147,7 +147,7 @@ func (c *Connection) WsReader(apikey string) {
 			break
 		}
 		saveMessage(msg)
-		collections[apikey].broadcast <- msg
+		collections[apikey+from].broadcast <- msg
 	}
 	c.ws.Close()
 }
