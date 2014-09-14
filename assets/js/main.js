@@ -41,7 +41,7 @@ $(function() {
     });
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://localhost:8080/qwe/ws");
+        conn = new WebSocket("ws://localhost:8080/" + window.location.host + "/ws");
         conn.onclose = function(e) {
             appendLog($("<div><b>Connection closed.</b></div>"))
         }
@@ -51,7 +51,7 @@ $(function() {
                 from = data.from == username ? "Вы" : data.from,
                 className = data.from == username ? "message-item" : "message-item reply",
                 tpl = "<p class='from'>" + from + "</p>" +
-                    "<p class='message'>" + data.message + "</p>";
+                "<p class='message'>" + data.message + "</p>";
 
             appendLog($("<div/>").addClass(className).html(tpl));
         }

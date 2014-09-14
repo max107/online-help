@@ -29,7 +29,7 @@ body {
 #log .message-item .from {
     white-space: nowrap;
     text-overflow: ellipsis;
-    width: 100px;
+    width: 200px;
     overflow: hidden;
     color: #888;
     font-weight: 700;
