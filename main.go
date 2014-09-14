@@ -3,11 +3,14 @@ package main
 import (
 	"./xmpp"
 	"encoding/json"
+	// "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	// "github.com/keep94/weblogs"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var (
@@ -18,15 +21,15 @@ func GetJabberAlias(username string) string {
 	return "Менеджер"
 }
 
-func GetJabberClient(apikey string, from string) *xmpp.Client {
-	if talk, ok := xmppConnections[apikey+from]; ok {
+func GetJabberClient(domain string, from string) *xmpp.Client {
+	if talk, ok := xmppConnections[domain+from]; ok {
 		return talk
 	} else {
-		return InitJabber(apikey, from)
+		return InitJabber(domain, from)
 	}
 }
 
-func InitJabber(apikey string, from string) *xmpp.Client {
+func InitJabber(domain string, from string) *xmpp.Client {
 	options := xmpp.Options{
 		Host:     "helpdev.info",
 		User:     "",
@@ -53,21 +56,21 @@ func InitJabber(apikey string, from string) *xmpp.Client {
 				if v.Text != "" {
 					username := strings.Split(v.Remote, "/")
 
-					msg := newMessage(username[0], v.Text)
+					msg := newMessage(username[0], v.Text, domain)
 					msg.From = GetJabberAlias(username[0])
 
-					collections[apikey+from].msg(msg)
+					collections[domain+from].msg(msg)
 				}
 			}
 		}
 	}()
 
-	xmppConnections[apikey+from] = talk
+	xmppConnections[domain+from] = talk
 	return talk
 }
 
-func SendMsg(apikey string, from string, to string, msg Message) {
-	talk := GetJabberClient(apikey, from)
+func SendMsg(domain string, from string, to string, msg Message) {
+	talk := GetJabberClient(domain, from)
 	talk.Send(xmpp.Chat{
 		Remote: to,
 		Type:   "chat",
@@ -94,26 +97,31 @@ func (h *Hub) msg(msg Message) {
 	for c := range h.connections {
 		select {
 		case c.send <- msg.ToJson():
-		default:
-			delete(h.connections, c)
-			close(c.send)
+			// default:
+			// 	delete(h.connections, c)
+			// 	close(c.send)
 		}
 	}
 }
 
-func (h *Hub) run(apikey string, from string) {
+func (h *Hub) run(domain string, from string) {
 	for {
 		select {
 		case c := <-h.register:
 			log.Printf("register")
 			h.connections[c] = true
+
+			for _, msg := range getMessages(domain) {
+				h.msg(msg)
+			}
+
 		case c := <-h.unregister:
 			log.Printf("unregister")
 			delete(h.connections, c)
 			close(c.send)
 		case msg := <-h.broadcast:
 			log.Printf("broadcast")
-			SendMsg(apikey, from, "max@xmpp.107.su", msg)
+			SendMsg(domain, from, "max@xmpp.107.su", msg)
 			h.msg(msg)
 		}
 	}
@@ -130,6 +138,10 @@ func (msg Message) ToJson() []byte {
 var upgrader = &websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		log.Printf("CheckOrigin")
+		return true
+	},
 }
 
 type Connection struct {
@@ -139,21 +151,23 @@ type Connection struct {
 	send chan []byte
 }
 
-func (c *Connection) WsReader(apikey string, from string) {
+func (c *Connection) WsReader(domain string, from string) {
 	for {
 		msg := Message{}
 		err := c.ws.ReadJSON(&msg)
 		if err != nil {
 			break
 		}
+		msg.Domain = domain
 		saveMessage(msg)
-		collections[apikey+from].broadcast <- msg
+		collections[domain+from].broadcast <- msg
 	}
 	c.ws.Close()
 }
 
-func (c *Connection) WsWriter() {
+func (c *Connection) WsWriter(domain string) {
 	for message := range c.send {
+		log.Printf("%s", message)
 		err := c.ws.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
 			break
@@ -162,18 +176,35 @@ func (c *Connection) WsWriter() {
 	c.ws.Close()
 }
 
+func Log(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	initDatabase()
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", homeHandler).Methods("GET")
-	router.HandleFunc("/{apikey:[a-z]+}/ws", wsHandler).Methods("GET")
+	router.HandleFunc("/{domain}/ws", wsHandler)
 
 	http.Handle("/", router)
 
 	http.Handle("/assets/", http.StripPrefix("/assets", http.FileServer(http.Dir("assets/"))))
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
+	srv := &http.Server{
+		Addr:           ":8080",
+		Handler:        Log(http.DefaultServeMux),
+		ReadTimeout:    1000 * time.Second,
+		WriteTimeout:   1000 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
+
+	log.Fatal(srv.ListenAndServe())
 }

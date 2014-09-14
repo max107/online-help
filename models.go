@@ -28,32 +28,32 @@ func initDatabase() {
 	db.SingularTable(true)
 
 	// Drop table if exists
-	db.DropTableIfExists(Message{})
+	// db.DropTableIfExists(Message{})
 	// Create table
-	db.CreateTable(Message{})
-
-	newMessage("qwe", "qwe")
+	// db.CreateTable(Message{})
 }
 
-func getMessages(from string, limit int) []Message {
+func getMessages(domain string) []Message {
 	var messages []Message
-	db.Where(&Message{From: from}).Find(&messages)
+	db.Where(&Message{Domain: domain}).Find(&messages)
 	return messages
 }
 
 func saveMessage(msg Message) Message {
-	log.Printf("Create new message: {from: %s, message: %s}", msg.From, msg.Message)
+	log.Printf("Create new message: {from: %s, message: %s, domain: %s}", msg.From, msg.Message, msg.Domain)
 	// returns true if record hasn’t been saved (primary key `Id` is blank)
-	db.NewRecord(msg) // => true
-	db.Create(&msg)
+	if db.NewRecord(msg) {
+		db.Create(&msg)
+	}
 	return msg
 }
 
-func newMessage(from string, message string) Message {
-	log.Printf("Create new message: {from: %s, message: %s}", from, message)
-	msg := Message{From: from, Message: message, CreatedAt: time.Now()}
+func newMessage(from string, message string, domain string) Message {
+	msg := Message{From: from, Message: message, Domain: domain, CreatedAt: time.Now()}
 	// returns true if record hasn’t been saved (primary key `Id` is blank)
-	db.NewRecord(msg) // => true
-	db.Create(&msg)
+	if db.NewRecord(msg) {
+		db.Create(&msg)
+		log.Printf("Create new message: {from: %s, message: %s, domain: %s}", from, message, domain)
+	}
 	return msg
 }

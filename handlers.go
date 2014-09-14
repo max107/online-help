@@ -13,16 +13,13 @@ var (
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	homeTempl.Execute(w, r.Host)
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	params := mux.Vars(r)
-	apikey := params["apikey"]
-	log.Printf("%s", apikey)
+	domain := params["domain"]
+	log.Printf("Domain: %s", domain)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -34,9 +31,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("online_from")
 	from := cookie.Value
 
-	log.Printf("%s", apikey+from)
+	log.Printf("%s", domain+from)
 
-	if h, ok := collections[apikey+from]; ok {
+	if h, ok := collections[domain+from]; ok {
 		h.register <- c
 		defer func() { h.unregister <- c }()
 	} else {
@@ -45,14 +42,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		h.register = make(chan *Connection)
 		h.unregister = make(chan *Connection)
 		h.connections = make(map[*Connection]bool)
-		go h.run(apikey, from)
+		go h.run(domain, from)
 
-		collections[apikey+from] = h
+		collections[domain+from] = h
 
 		h.register <- c
 		defer func() { h.unregister <- c }()
 	}
 
-	go c.WsWriter()
-	c.WsReader(apikey, from)
+	go c.WsWriter(domain)
+	c.WsReader(domain, from)
 }
